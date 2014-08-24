@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Pmachlearn : ">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Pmachlearn</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/vranjan/pMachLearn">View on GitHub</a>
+
+          <h1 id="project_title">Pmachlearn</h1>
+          <h2 id="project_tagline"></h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/vranjan/pMachLearn/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/vranjan/pMachLearn/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>&lt;!DOCTYPE html&gt;</p>
+
+<p></p>
+
+<p></p>
+
+<p></p>
+
+<p></p><p></p>
+
+code{white-space: pre;}<p></p>
+
+
+  pre:not([class]) {
+    background-color: white;
+  }
+<p></p>
+
+<p></p>
+
+
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+<div>
+
+
+
+
+<div>
+<h4>
+<a name="human-activity-recognition-predicting-exercise-class-using-machine-lerning-methods" class="anchor" href="#human-activity-recognition-predicting-exercise-class-using-machine-lerning-methods"><span class="octicon octicon-link"></span></a>Human Activity Recognition: Predicting Exercise Class using Machine Lerning Methods</h4>
+<div>
+<h5>
+<a name="executive-summary" class="anchor" href="#executive-summary"><span class="octicon octicon-link"></span></a>Executive Summary</h5>
+<p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.</p>
+<p>In this project, the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a> (see the section on the Weight Lifting Exercise Dataset).</p>
+<p>The goal in this project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set.The</p>
+</div>
+
+<div>
+<h5>
+<a name="data-preparation" class="anchor" href="#data-preparation"><span class="octicon octicon-link"></span></a>Data preparation</h5>
+<p>For the data preparation, first, I loaded training and test data in R. I converted all empty string to “NA”. The summary on the training data revealed that multiple columns have large number of NAs. The function below finds out indices of all the columns which has more than 25% NAs. Once the indices are found, I remove those columns from the training data. Finally, I removed columns X, user_name, new_window, num_window, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp from the training data as these are not accelerometer data and should not be in an indicator of the the way exercise is performed.</p>
+<pre><code>#
+# Read in the training and test data.
+#
+trainData &lt;- read.csv(file="pml-training.csv")
+testData &lt;- read.csv(file="pml-testing.csv")
+# 
+# Convert the blanks to "NA".
+#
+trainData[trainData == ""] = NA</code></pre>
+<pre><code>summary(trainData)</code></pre>
+<pre><code>#
+# Identify columns with more than 25% NAs and store the column indices.
+#
+dIndex = numeric()  # initialize empty numeric vector
+for(i in 1:length(names(trainData))){
+  if(sum(is.na(trainData[i]))/nrow(trainData) &gt;= 0.25) dIndex = c(dIndex,i)
+}
+#
+# Remove identified columns.
+#
+trainData &lt;- trainData[,-dIndex]
+#
+# Remove non-accelererometer variables that is not important for prediction
+#
+trainData &lt;- subset(trainData, select=-c(X, user_name, new_window, num_window, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp))</code></pre>
+</div>
+
+<div>
+<h5>
+<a name="machine-learning" class="anchor" href="#machine-learning"><span class="octicon octicon-link"></span></a>Machine learning</h5>
+<p>I have used random forest as implemented in CARET package for building model and prediction. I have taken two approaches.</p>
+<ol>
+<li>Split the training data into training set (75%) and cross validation set (25%). In the following the steps involved and results are printed. I have used 10 fold cross validation set, so the sample size is 13246 for training without any preprocessing of data.</li>
+</ol>
+<pre><code>library(caret)
+set.seed(12000)
+inTrain &lt;- createDataPartition(trainData$classe, p=0.75, list=F)
+training &lt;- trainData[inTrain,]
+testing &lt;- trainData[-inTrain,]
+#
+library(doParallel)
+registerDoParallel(cores = 4)
+ctrl &lt;- trainControl(method="cv", number = 10, repeats = 4)
+modFit &lt;- train(classe ~ ., data=training, mode="rf", trControl = ctrl, ntree=50)</code></pre>
+<p>Based on the accuracy, th final value used for the model was mtry = 27, i.e. the number of variables tried at each split is 27. Further out of box (oob) estimate of error rate in training data is 0.71%. The confusion matrix for training data is also printed below. I have also printed 20 most important variables in the model.</p>
+<pre><code>#modFit
+modFit$results</code></pre>
+<pre><code>##   mtry Accuracy  Kappa AccuracySD  KappaSD
+## 1    2   0.9913 0.9890   0.002414 0.003055
+## 2   27   0.9921 0.9900   0.002522 0.003190
+## 3   52   0.9861 0.9825   0.002338 0.002958</code></pre>
+<pre><code>modFit$finalModel</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, ntree = 50, mtry = param$mtry, mode = "rf") 
+##                Type of random forest: classification
+##                      Number of trees: 50
+## No. of variables tried at each split: 27
+## 
+##         OOB estimate of  error rate: 0.71%
+## Confusion matrix:
+##      A    B    C    D    E class.error
+## A 4177    5    0    1    2    0.001912
+## B   17 2819   12    0    0    0.010183
+## C    0   15 2543    9    0    0.009349
+## D    0    2   26 2382    2    0.012438
+## E    0    3    4    6 2693    0.004804</code></pre>
+<pre><code>varImp(modFit)</code></pre>
+<pre><code>## rf variable importance
+## 
+##   only 20 most important variables shown (out of 52)
+## 
+##                      Overall
+## roll_belt             100.00
+## pitch_forearm          58.72
+## yaw_belt               51.54
+## magnet_dumbbell_z      42.20
+## pitch_belt             41.84
+## magnet_dumbbell_y      39.10
+## roll_forearm           37.87
+## accel_dumbbell_y       18.77
+## roll_dumbbell          18.62
+## magnet_dumbbell_x      18.45
+## magnet_belt_z          14.60
+## accel_forearm_x        14.17
+## magnet_forearm_z       12.84
+## accel_dumbbell_z       12.48
+## total_accel_dumbbell   11.98
+## magnet_belt_y          11.37
+## yaw_dumbbell            9.85
+## gyros_belt_z            9.80
+## roll_arm                9.66
+## accel_belt_z            9.34</code></pre>
+<p>Finally, the out of sample accuracy is 99.20%, i.e. the out of sample error rate is 0.8% calculated below. The accompanying confusion matrix shows the prediction and error rate for each classe.</p>
+<pre><code>pred &lt;- predict(modFit, newdata=testing)
+sum(pred == testing$classe) / length(pred)</code></pre>
+<pre><code>## [1] 0.9925</code></pre>
+<pre><code>confusionMatrix(testing$classe, pred)$table</code></pre>
+<pre><code>##           Reference
+## Prediction    A    B    C    D    E
+##          A 1393    2    0    0    0
+##          B    3  944    2    0    0
+##          C    0    3  849    3    0
+##          D    0    0   13  789    2
+##          E    0    0    3    6  892</code></pre>
+<p>The final prediction for the test data (to be submitted separately) is given below.</p>
+<pre><code>predTest &lt;- predict(modFit, newdata = testData)
+predTest</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<ol start="2">
+<li>The second approach I took was to not split the training data into further training and cross validation set. Rather use the well known fact that random forest does very well with respect to out of box (oob) error. I wanted to check if this holds if I don’t use cross validation set. Whereas in cross validation method above, 10% of the data was used for cross validation, in the current method 3rd of the data is used for cross validation. The oob error rate is now only 0.57%. The two most significant variables used for prediction are the same, but their weights in the model is changed (and also the order of significance). The variable mtry = 27 for this model too.</li>
+</ol>
+<pre><code>library(doParallel)
+registerDoParallel(cores = 4)
+ctrl &lt;- trainControl(method="oob")
+modFit1 &lt;- train(classe ~ ., data=trainData, mode="rf", trControl = ctrl, ntree=50)
+modFit1$finalModel</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, ntree = 50, mtry = param$mtry, mode = "rf") 
+##                Type of random forest: classification
+##                      Number of trees: 50
+## No. of variables tried at each split: 27
+## 
+##         OOB estimate of  error rate: 0.61%
+## Confusion matrix:
+##      A    B    C    D    E class.error
+## A 5574    4    0    1    1    0.001075
+## B   20 3765   11    1    0    0.008428
+## C    0   18 3389   15    0    0.009643
+## D    0    3   25 3182    6    0.010572
+## E    0    0    5    9 3593    0.003881</code></pre>
+<pre><code>predTest1 &lt;- predict(modFit1, newdata = testData)
+predTest1</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<pre><code>varImp(modFit1)</code></pre>
+<pre><code>## rf variable importance
+## 
+##   only 20 most important variables shown (out of 52)
+## 
+##                      Overall
+## roll_belt             100.00
+## pitch_forearm          62.52
+## yaw_belt               57.35
+## pitch_belt             46.52
+## magnet_dumbbell_z      44.49
+## magnet_dumbbell_y      43.46
+## roll_forearm           40.50
+## accel_dumbbell_y       24.01
+## magnet_dumbbell_x      21.41
+## magnet_belt_z          16.82
+## accel_forearm_x        16.16
+## accel_belt_z           15.28
+## roll_dumbbell          15.02
+## magnet_forearm_z       14.00
+## total_accel_dumbbell   13.79
+## accel_dumbbell_z       13.13
+## magnet_belt_y          12.06
+## yaw_arm                11.54
+## gyros_belt_z           10.47
+## magnet_belt_x           9.99</code></pre>
+</div>
+
+<p></p>
+</div>
+
+<div>
+<h4>
+<a name="conclusion" class="anchor" href="#conclusion"><span class="octicon octicon-link"></span></a>Conclusion</h4>
+<p>The random forest from CARET package produces 0.8% cross validation set error. The final results on the test data has 100% accuracy.</p>
+</div>
+
+<p></p>
+</div>
+
+<p>
+</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Pmachlearn maintained by <a href="https://github.com/vranjan">vranjan</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
